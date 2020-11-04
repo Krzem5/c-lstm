@@ -2,14 +2,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <time.h>
 #include <windows.h>
 
 
 
-#define N_SEQ 200
+#define DATASET_ENTRIES 200
 #define SEQ_LEN 20
-#define DATASET_SIZE (size_t)(N_SEQ-1+SEQ_LEN+1)
-#define GRAPH_DATA_POINTS 100
+#define TOTAL_EPOCHS 10
+#define DATASET_SIZE (size_t)(DATASET_ENTRIES-1+SEQ_LEN+1)
+#define GRAPH_DATA_POINTS 114
 #define GRAPH_HEIGHT 20
 
 
@@ -20,10 +22,6 @@ static float* DATA[DATASET_SIZE];
 
 void _graph_rnn(LstmRnn rnn){
 	assert(GRAPH_DATA_POINTS>SEQ_LEN+1);
-	HANDLE ch=GetStdHandle(-11);
-	DWORD cm=0;
-	GetConsoleMode(ch,&cm);
-	SetConsoleMode(ch,7);
 	size_t s=(size_t)(((float)rand())/RAND_MAX*(DATASET_SIZE-GRAPH_DATA_POINTS-1));
 	float mn=0;
 	float mx=0;
@@ -60,7 +58,7 @@ void _graph_rnn(LstmRnn rnn){
 			g[i][1]=GRAPH_HEIGHT+1;
 		}
 	}
-	printf("\x1b[48;2;24;24;24m");
+	printf("\x1b[1;1H\x1b[2J\x1b[48;2;24;24;24m");
 	for (uint8_t i=0;i<GRAPH_DATA_POINTS+6;i++){
 		putchar(' ');
 	}
@@ -105,27 +103,32 @@ void _graph_rnn(LstmRnn rnn){
 		putchar(' ');
 	}
 	printf("\x1b[0m");
-	SetConsoleMode(ch,cm);
 }
 
 
 
 int main(int argc,const char** argv){
-	srand(0);
+	srand((unsigned int)time(0));
 	for (size_t i=0;i<DATASET_SIZE;i++){
 		DATA[i]=malloc(sizeof(float));
-		DATA[i][0]=sinf(i*0.125f);
+		DATA[i][0]=sinf(i*0.15f);
 	}
-	LstmRnn rnn=init_lstm_rnn("../rnn-save.rnn",1,150,1,0.01f);
-	for (uint8_t i=0;i<1;i++){
-		for (uint8_t j=0;j<1;j++){
-			printf("%hu\n",i*1+j);
+	SetConsoleOutputCP(CP_UTF8);
+	SetConsoleMode(GetStdHandle(-11),7);
+	LstmRnn rnn=init_lstm_rnn("../rnn-save2.rnn",1,150,1,0.01f);
+	for (uint8_t i=0;i<TOTAL_EPOCHS;i++){
+		uint8_t _lp=101;
+		for (uint8_t j=0;j<DATASET_ENTRIES;j++){
+			if (_lp==101||((uint16_t)j)*100/DATASET_ENTRIES>_lp){
+				_lp=(uint8_t)(((uint16_t)j)*100/DATASET_ENTRIES);
+				printf("\x1b[0G\x1b[2KEpoch %hhu/%hhu: % 2hhu%%...",i+1,TOTAL_EPOCHS,_lp);
+			}
 			lstm_rnn_train(rnn,DATA+j,SEQ_LEN,DATA+j+1);
 		}
+		printf("\x1b[0G\x1b[2KEpoch %hhu/%hhu Complete\n",i+1,TOTAL_EPOCHS);
 	}
-	printf("BBB\n");
-	_graph_rnn(rnn);
 	save_lstm_rnn(rnn);
+	_graph_rnn(rnn);
 	free_lstm_rnn(rnn);
 	for (size_t i=0;i<DATASET_SIZE;i++){
 		free(DATA[i]);
