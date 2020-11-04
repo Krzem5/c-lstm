@@ -6,6 +6,8 @@
 
 
 
+#ifndef __cplusplus
+#ifndef __LSTM_RNN_ONLY_STRUCT__
 #ifdef NULL
 #undef NULL
 #endif
@@ -20,10 +22,21 @@
 			raise(SIGABRT); \
 		} \
 	} while (0)
+#endif
+#else
+extern "C" {
+#endif
 
 
 
 typedef struct __LSTMRNN* LstmRnn;
+
+
+
+enum RNN_BACKEND{
+	RNN_BACKEND_CPU=0x00,
+	RNN_BACKEND_GPU=0x01
+};
 
 
 
@@ -83,6 +96,14 @@ struct __LSTMRNN{
 
 
 
+#ifndef __LSTM_RNN_ONLY_STRUCT__
+
+
+
+bool set_rnn_backend(enum RNN_BACKEND t);
+
+
+
 LstmRnn init_lstm_rnn(const char* fp,uint8_t i,uint8_t h,uint8_t o,float lr);
 
 
@@ -103,4 +124,8 @@ void free_lstm_rnn(LstmRnn rnn);
 
 
 
+#endif
+#ifdef __cplusplus
+}
+#endif
 #endif

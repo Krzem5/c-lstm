@@ -7,9 +7,10 @@
 
 
 
-#define DATASET_ENTRIES 200
+#define HIDDEN_NODES 150
+#define DATASET_ENTRIES 1000
 #define SEQ_LEN 20
-#define TOTAL_EPOCHS 10
+#define TOTAL_EPOCHS 5
 #define DATASET_SIZE (size_t)(DATASET_ENTRIES-1+SEQ_LEN+1)
 #define GRAPH_DATA_POINTS 114
 #define GRAPH_HEIGHT 20
@@ -62,11 +63,11 @@ void _graph_rnn(LstmRnn rnn){
 	for (uint8_t i=0;i<GRAPH_DATA_POINTS+6;i++){
 		putchar(' ');
 	}
-	printf("\n\x1b[38;2;156;156;156m  ┌");
+	printf("\n\x1b[38;2;156;156;156m  ╔");
 	for (uint8_t i=0;i<GRAPH_DATA_POINTS;i++){
-		printf("─");
+		printf("═");
 	}
-	printf("┐  \n  │");
+	printf("╗  \n  ║");
 	for (uint8_t i=0;i<(GRAPH_DATA_POINTS-ln)/2;i++){
 		putchar(' ');
 	}
@@ -74,31 +75,105 @@ void _graph_rnn(LstmRnn rnn){
 	for (uint8_t i=0;i<(GRAPH_DATA_POINTS-ln+1)/2;i++){
 		putchar(' ');
 	}
-	printf("\x1b[38;2;156;156;156m│  \n  ├");
+	printf("\x1b[38;2;156;156;156m║  \n  ╠");
 	for (uint8_t i=0;i<GRAPH_DATA_POINTS;i++){
-		printf("─");
+		printf("═");
 	}
-	printf("┤  \n");
+	printf("╣  \n");
 	for (uint8_t i=0;i<GRAPH_HEIGHT;i++){
-		printf("\x1b[38;2;156;156;156m  │");
+		if (g[0][0]!=i&&g[0][1]!=i){
+			printf("\x1b[38;2;156;156;156m  ║");
+		}
+		else{
+			printf("\x1b[38;2;156;156;156m  ╟");
+		}
 		for (uint8_t j=0;j<GRAPH_DATA_POINTS;j++){
-			if (g[j][1]==i){
-				printf("\x1b[38;2;105;210;105m×");
+			if (j==SEQ_LEN+1&&g[j][1]==i){
+				printf("\x1b[38;2;105;210;105m╶");
+				continue;
 			}
-			else if (g[j][0]==i){
-				printf("\x1b[38;2;50;100;210m·");
+			if (j>SEQ_LEN+1){
+				int8_t df=g[j][1]-g[j-1][1];
+				if (g[j][1]==i){
+					if (df>0){
+						printf("\x1b[38;2;105;210;105m╰");
+						continue;
+					}
+					else if (df<0){
+						printf("\x1b[38;2;105;210;105m╭");
+						continue;
+					}
+					else{
+						printf("\x1b[38;2;105;210;105m─");
+						continue;
+					}
+				}
+				else if (g[j-1][1]==i){
+					if (df>0){
+						printf("\x1b[38;2;105;210;105m╮");
+						continue;
+					}
+					else{
+						printf("\x1b[38;2;105;210;105m╯");
+						continue;
+					}
+				}
+				else if ((df<0&&g[j][1]<i&&i<g[j-1][1])||(df>0&&g[j][1]>i&&i>g[j-1][1])){
+					printf("\x1b[38;2;105;210;105m│");
+					continue;
+				}
+			}
+			if (j==0){
+				if (g[j][0]==i){
+					printf("\x1b[38;2;50;100;210m─");
+					continue;
+				}
 			}
 			else{
-				putchar(' ');
+				int8_t df=g[j][0]-g[j-1][0];
+				if (g[j][0]==i){
+					if (df>0){
+						printf("\x1b[38;2;50;100;210m╰");
+					}
+					else if (df<0){
+						printf("\x1b[38;2;50;100;210m╭");
+					}
+					else{
+						printf("\x1b[38;2;50;100;210m─");
+					}
+					continue;
+				}
+				else if (g[j-1][0]==i){
+					if (df>0){
+						printf("\x1b[38;2;50;100;210m╮");
+						continue;
+					}
+					else{
+						printf("\x1b[38;2;50;100;210m╯");
+						continue;
+					}
+				}
+				else if ((df<-1&&g[j][0]<i&&i<g[j-1][0])||(df>1&&g[j][0]>i&&i>g[j-1][0])){
+					printf("\x1b[38;2;50;100;210m│");
+					continue;
+				}
 			}
+			// printf("\x1b[38;2;50;100;210m·");
+			// continue;
+			putchar(' ');
 		}
-		printf("\x1b[38;2;156;156;156m│  \n");
+		if (g[GRAPH_DATA_POINTS-1][0]!=i&&g[GRAPH_DATA_POINTS-1][1]!=i){
+			printf("\x1b[38;2;156;156;156m║  \n");
+		}
+		else{
+			printf("\x1b[38;2;156;156;156m╢  \n");
+		}
 	}
-	printf("  └");
+	printf("  ╚");
 	for (uint8_t i=0;i<GRAPH_DATA_POINTS;i++){
-		printf("─");
+		printf("═");
 	}
-	printf("┘  \n");
+	printf("╝  \n");
 	for (uint8_t i=0;i<GRAPH_DATA_POINTS+6;i++){
 		putchar(' ');
 	}
@@ -111,24 +186,28 @@ int main(int argc,const char** argv){
 	srand((unsigned int)time(0));
 	for (size_t i=0;i<DATASET_SIZE;i++){
 		DATA[i]=malloc(sizeof(float));
-		DATA[i][0]=sinf(i*0.15f);
+		DATA[i][0]=sinf(i*0.15f)*sinf(i*0.075f);
 	}
 	SetConsoleOutputCP(CP_UTF8);
 	SetConsoleMode(GetStdHandle(-11),7);
-	LstmRnn rnn=init_lstm_rnn("../rnn-save2.rnn",1,150,1,0.01f);
-	for (uint8_t i=0;i<TOTAL_EPOCHS;i++){
-		uint8_t _lp=101;
-		for (uint8_t j=0;j<DATASET_ENTRIES;j++){
-			if (_lp==101||((uint16_t)j)*100/DATASET_ENTRIES>_lp){
-				_lp=(uint8_t)(((uint16_t)j)*100/DATASET_ENTRIES);
-				printf("\x1b[0G\x1b[2KEpoch %hhu/%hhu: % 2hhu%%...",i+1,TOTAL_EPOCHS,_lp);
-			}
-			lstm_rnn_train(rnn,DATA+j,SEQ_LEN,DATA+j+1);
-		}
-		printf("\x1b[0G\x1b[2KEpoch %hhu/%hhu Complete\n",i+1,TOTAL_EPOCHS);
+	SetPriorityClass(GetCurrentProcess(),HIGH_PRIORITY_CLASS);
+	if (set_rnn_backend(RNN_BACKEND_GPU)==false){
+		return 1;
 	}
-	save_lstm_rnn(rnn);
-	_graph_rnn(rnn);
+	LstmRnn rnn=init_lstm_rnn("../rnn-save3.rnn",1,HIDDEN_NODES,1,0.01f);
+	// for (uint8_t i=0;i<TOTAL_EPOCHS;i++){
+	// 	uint8_t _lp=101;
+	// 	for (uint32_t j=0;j<DATASET_ENTRIES;j++){
+	// 		if (_lp==101||((uint16_t)j)*100/DATASET_ENTRIES>_lp){
+	// 			_lp=(uint8_t)(((uint16_t)j)*100/DATASET_ENTRIES);
+	// 			printf("\x1b[0G\x1b[2KEpoch %hhu/%hhu: % 2hhu%%...",i+1,TOTAL_EPOCHS,_lp);
+	// 		}
+	// 		lstm_rnn_train(rnn,DATA+j,SEQ_LEN,DATA+j+1);
+	// 	}
+	// 	printf("\x1b[0G\x1b[2KEpoch %hhu/%hhu Complete\n",i+1,TOTAL_EPOCHS);
+	// }
+	// save_lstm_rnn(rnn);
+	// _graph_rnn(rnn);
 	free_lstm_rnn(rnn);
 	for (size_t i=0;i<DATASET_SIZE;i++){
 		free(DATA[i]);

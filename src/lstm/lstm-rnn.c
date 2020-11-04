@@ -5,11 +5,37 @@
 
 
 
-float tanh_d(float x){
-	return 1-x*x;
+typedef void (*_gpu_lib_init_rand_t)(LstmRnn rnn);
+typedef void (*_gpu_lib_init_file_t)(LstmRnn rnn,FILE* f);
+typedef float* (*_gpu_lib_predict_t)(LstmRnn rnn,float** in_,uint32_t ln);
+typedef void (*_gpu_lib_train_t)(LstmRnn rnn,float** in_,uint32_t ln,float** t);
+typedef void (*_gpu_lib_save_t)(LstmRnn rnn,FILE* f);
+typedef void (*_gpu_lib_free_t)(LstmRnn rnn);
+enum RNN_BACKEND _bt=RNN_BACKEND_CPU;
+HMODULE _gpu_lib=NULL;
+_gpu_lib_init_rand_t _gpu_lib_init_rand=NULL;
+_gpu_lib_init_file_t _gpu_lib_init_file=NULL;
+_gpu_lib_predict_t _gpu_lib_predict=NULL;
+_gpu_lib_train_t _gpu_lib_train=NULL;
+_gpu_lib_save_t _gpu_lib_save=NULL;
+_gpu_lib_free_t _gpu_lib_free=NULL;
+
+
+
+void _free_gpu_lib(void){
+	if (_gpu_lib!=NULL){
+		FreeLibrary(_gpu_lib);
+		_gpu_lib=NULL;
+	}
 }
+
+
+
 float sigmoidf(float x){
 	return 1.0f/(1+expf(-x));
+}
+float tanh_d(float x){
+	return 1-x*x;
 }
 float sigmoid_d(float x){
 	return (1-x)*x;
@@ -263,8 +289,47 @@ float* _fc_train(struct __LSTMRNN_FULLY_CONNECTED_LAYER* fc,float* in_,float* tg
 
 
 
-float randf(void){
-	return ((float)rand())/RAND_MAX;
+bool set_rnn_backend(enum RNN_BACKEND t){
+	_bt=t;
+	if (t==RNN_BACKEND_GPU&&_gpu_lib==NULL){
+		_gpu_lib=LoadLibraryA("gpu_kernel.dll");
+		if (_gpu_lib==NULL){
+			printf("ERROR: DLL 'gpu_kernel.dll' not Found.\n");
+			return false;
+		}
+		atexit(_free_gpu_lib);
+		_gpu_lib_init_rand=(_gpu_lib_init_rand_t)GetProcAddress(_gpu_lib,"gpu_lstm_rnn_init_rand");
+		if (_gpu_lib_init_rand==NULL){
+			printf("ERROR: Funtion 'gpu_lstm_rnn_init_rand' not Found in the DLL.\n");
+			return false;
+		}
+		_gpu_lib_init_file=(_gpu_lib_init_file_t)GetProcAddress(_gpu_lib,"gpu_lstm_rnn_init_file");
+		if (_gpu_lib_init_file==NULL){
+			printf("ERROR: Funtion 'gpu_lstm_rnn_init_file' not Found in the DLL.\n");
+			return false;
+		}
+		_gpu_lib_predict=(_gpu_lib_predict_t)GetProcAddress(_gpu_lib,"gpu_lstm_rnn_predict");
+		if (_gpu_lib_predict==NULL){
+			printf("ERROR: Funtion 'gpu_lstm_rnn_predict' not Found in the DLL.\n");
+			return false;
+		}
+		_gpu_lib_train=(_gpu_lib_train_t)GetProcAddress(_gpu_lib,"gpu_lstm_rnn_train");
+		if (_gpu_lib_train==NULL){
+			printf("ERROR: Funtion 'gpu_lstm_rnn_train' not Found in the DLL.\n");
+			return false;
+		}
+		_gpu_lib_save=(_gpu_lib_save_t)GetProcAddress(_gpu_lib,"gpu_lstm_rnn_save");
+		if (_gpu_lib_save==NULL){
+			printf("ERROR: Funtion 'gpu_lstm_rnn_save' not Found in the DLL.\n");
+			return false;
+		}
+		_gpu_lib_free=(_gpu_lib_free_t)GetProcAddress(_gpu_lib,"gpu_lstm_rnn_free");
+		if (_gpu_lib_free==NULL){
+			printf("ERROR: Funtion 'gpu_lstm_rnn_free' not Found in the DLL.\n");
+			return false;
+		}
+	}
+	return true;
 }
 
 
@@ -279,14 +344,14 @@ LstmRnn init_lstm_rnn(const char* fp,uint8_t in,uint8_t hn,uint8_t on,float lr){
 	o->lstm=malloc(sizeof(struct __LSTMRNN_LSTM_LAYER));
 	o->lstm->x=in;
 	o->lstm->y=hn;
-	o->lstm->wx=malloc(o->lstm->y*sizeof(float*));
-	o->lstm->wf=malloc(o->lstm->y*sizeof(float*));
-	o->lstm->wi=malloc(o->lstm->y*sizeof(float*));
-	o->lstm->wo=malloc(o->lstm->y*sizeof(float*));
-	o->lstm->bx=malloc(o->lstm->y*sizeof(float));
-	o->lstm->bf=malloc(o->lstm->y*sizeof(float));
-	o->lstm->bi=malloc(o->lstm->y*sizeof(float));
-	o->lstm->bo=malloc(o->lstm->y*sizeof(float));
+	o->lstm->wx=NULL;
+	o->lstm->wf=NULL;
+	o->lstm->wi=NULL;
+	o->lstm->wo=NULL;
+	o->lstm->bx=NULL;
+	o->lstm->bf=NULL;
+	o->lstm->bi=NULL;
+	o->lstm->bo=NULL;
 	o->lstm->_sz=-1;
 	o->lstm->_cl=NULL;
 	o->lstm->_xhl=NULL;
@@ -295,8 +360,8 @@ LstmRnn init_lstm_rnn(const char* fp,uint8_t in,uint8_t hn,uint8_t on,float lr){
 	o->lstm->_il=NULL;
 	o->lstm->_ol=NULL;
 	o->lstm->_outl=NULL;
-	o->lstm->_c=malloc(o->lstm->y*sizeof(float));
-	o->lstm->_h=malloc(o->lstm->y*sizeof(float));
+	o->lstm->_c=NULL;
+	o->lstm->_h=NULL;
 	o->lstm->_hg=NULL;
 	o->lstm->_cg=NULL;
 	o->lstm->_wxg=NULL;
@@ -310,58 +375,82 @@ LstmRnn init_lstm_rnn(const char* fp,uint8_t in,uint8_t hn,uint8_t on,float lr){
 	o->fc=malloc(sizeof(struct __LSTMRNN_FULLY_CONNECTED_LAYER));
 	o->fc->x=hn;
 	o->fc->y=on;
-	o->fc->w=malloc(o->fc->y*sizeof(float*));
-	o->fc->b=malloc(o->fc->y*sizeof(float));
+	o->fc->w=NULL;
+	o->fc->b=NULL;
+	if (_bt==RNN_BACKEND_CPU){
+		o->lstm->wx=malloc(o->lstm->y*sizeof(float*));
+		o->lstm->wf=malloc(o->lstm->y*sizeof(float*));
+		o->lstm->wi=malloc(o->lstm->y*sizeof(float*));
+		o->lstm->wo=malloc(o->lstm->y*sizeof(float*));
+		o->lstm->bx=malloc(o->lstm->y*sizeof(float));
+		o->lstm->bf=malloc(o->lstm->y*sizeof(float));
+		o->lstm->bi=malloc(o->lstm->y*sizeof(float));
+		o->lstm->bo=malloc(o->lstm->y*sizeof(float));
+		o->lstm->_c=malloc(o->lstm->y*sizeof(float));
+		o->lstm->_h=malloc(o->lstm->y*sizeof(float));
+		o->fc->w=malloc(o->fc->y*sizeof(float*));
+		o->fc->b=malloc(o->fc->y*sizeof(float));
+	}
 	if (GetFileAttributesA(o->fp)==INVALID_FILE_ATTRIBUTES&&GetLastError()==ERROR_FILE_NOT_FOUND){
-		for (uint8_t i=0;i<o->lstm->y;i++){
-			o->lstm->_c[i]=0;
-			o->lstm->_h[i]=0;
-			o->lstm->wx[i]=malloc((o->lstm->x+o->lstm->y)*sizeof(float));
-			o->lstm->wf[i]=malloc((o->lstm->x+o->lstm->y)*sizeof(float));
-			o->lstm->wi[i]=malloc((o->lstm->x+o->lstm->y)*sizeof(float));
-			o->lstm->wo[i]=malloc((o->lstm->x+o->lstm->y)*sizeof(float));
-			for (uint16_t j=0;j<o->lstm->x+o->lstm->y;j++){
-				o->lstm->wx[i][j]=randf()*0.2f-0.1f;
-				o->lstm->wf[i][j]=randf()*0.2f-0.1f;
-				o->lstm->wi[i][j]=randf()*0.2f-0.1f;
-				o->lstm->wo[i][j]=randf()*0.2f-0.1f;
-			}
-			o->lstm->bx[i]=randf()*0.2f-0.1f;
-			o->lstm->bf[i]=randf()*0.2f-0.1f;
-			o->lstm->bi[i]=randf()*0.2f-0.1f;
-			o->lstm->bo[i]=randf()*0.2f-0.1f;
+		if (_bt==RNN_BACKEND_GPU){
+			_gpu_lib_init_rand(o);
 		}
-		for (uint8_t i=0;i<o->fc->y;i++){
-			o->fc->w[i]=malloc(o->fc->x*sizeof(float));
-			for (uint8_t j=0;j<o->fc->x;j++){
-				o->fc->w[i][j]=randf()*2-1;
+		else{
+			for (uint8_t i=0;i<o->lstm->y;i++){
+				o->lstm->_c[i]=0;
+				o->lstm->_h[i]=0;
+				o->lstm->wx[i]=malloc((o->lstm->x+o->lstm->y)*sizeof(float));
+				o->lstm->wf[i]=malloc((o->lstm->x+o->lstm->y)*sizeof(float));
+				o->lstm->wi[i]=malloc((o->lstm->x+o->lstm->y)*sizeof(float));
+				o->lstm->wo[i]=malloc((o->lstm->x+o->lstm->y)*sizeof(float));
+				for (uint16_t j=0;j<o->lstm->x+o->lstm->y;j++){
+					o->lstm->wx[i][j]=((float)rand())/RAND_MAX*0.2f-0.1f;
+					o->lstm->wf[i][j]=((float)rand())/RAND_MAX*0.2f-0.1f;
+					o->lstm->wi[i][j]=((float)rand())/RAND_MAX*0.2f-0.1f;
+					o->lstm->wo[i][j]=((float)rand())/RAND_MAX*0.2f-0.1f;
+				}
+				o->lstm->bx[i]=((float)rand())/RAND_MAX*0.2f-0.1f;
+				o->lstm->bf[i]=((float)rand())/RAND_MAX*0.2f-0.1f;
+				o->lstm->bi[i]=((float)rand())/RAND_MAX*0.2f-0.1f;
+				o->lstm->bo[i]=((float)rand())/RAND_MAX*0.2f-0.1f;
 			}
-			o->fc->b[i]=0;
+			for (uint8_t i=0;i<o->fc->y;i++){
+				o->fc->w[i]=malloc(o->fc->x*sizeof(float));
+				for (uint8_t j=0;j<o->fc->x;j++){
+					o->fc->w[i][j]=((float)rand())/RAND_MAX*2-1;
+				}
+				o->fc->b[i]=0;
+			}
 		}
 	}
 	else{
 		FILE* f=NULL;
 		assert(fopen_s(&f,o->fp,"rb")==0);
-		assert(fread((void*)o->lstm->bx,sizeof(float),o->lstm->y,f)==o->lstm->y);
-		assert(fread((void*)o->lstm->bf,sizeof(float),o->lstm->y,f)==o->lstm->y);
-		assert(fread((void*)o->lstm->bi,sizeof(float),o->lstm->y,f)==o->lstm->y);
-		assert(fread((void*)o->lstm->bo,sizeof(float),o->lstm->y,f)==o->lstm->y);
-		for (uint8_t i=0;i<o->lstm->y;i++){
-			o->lstm->_c[i]=0;
-			o->lstm->_h[i]=0;
-			o->lstm->wx[i]=malloc((o->lstm->x+o->lstm->y)*sizeof(float));
-			o->lstm->wf[i]=malloc((o->lstm->x+o->lstm->y)*sizeof(float));
-			o->lstm->wi[i]=malloc((o->lstm->x+o->lstm->y)*sizeof(float));
-			o->lstm->wo[i]=malloc((o->lstm->x+o->lstm->y)*sizeof(float));
-			assert(fread((void*)o->lstm->wx[i],sizeof(float),o->lstm->x+o->lstm->y,f)==o->lstm->x+o->lstm->y);
-			assert(fread((void*)o->lstm->wf[i],sizeof(float),o->lstm->x+o->lstm->y,f)==o->lstm->x+o->lstm->y);
-			assert(fread((void*)o->lstm->wi[i],sizeof(float),o->lstm->x+o->lstm->y,f)==o->lstm->x+o->lstm->y);
-			assert(fread((void*)o->lstm->wo[i],sizeof(float),o->lstm->x+o->lstm->y,f)==o->lstm->x+o->lstm->y);
+		if (_bt==RNN_BACKEND_GPU){
+			_gpu_lib_init_file(o,f);
 		}
-		assert(fread((void*)o->fc->b,sizeof(float),o->fc->y,f)==o->fc->y);
-		for (uint8_t i=0;i<o->fc->y;i++){
-			o->fc->w[i]=malloc(o->fc->x*sizeof(float));
-			assert(fread((void*)o->fc->w[i],sizeof(float),o->fc->x,f)==o->fc->x);
+		else{
+			assert(fread((void*)o->lstm->bx,sizeof(float),o->lstm->y,f)==o->lstm->y);
+			assert(fread((void*)o->lstm->bf,sizeof(float),o->lstm->y,f)==o->lstm->y);
+			assert(fread((void*)o->lstm->bi,sizeof(float),o->lstm->y,f)==o->lstm->y);
+			assert(fread((void*)o->lstm->bo,sizeof(float),o->lstm->y,f)==o->lstm->y);
+			for (uint8_t i=0;i<o->lstm->y;i++){
+				o->lstm->_c[i]=0;
+				o->lstm->_h[i]=0;
+				o->lstm->wx[i]=malloc((o->lstm->x+o->lstm->y)*sizeof(float));
+				o->lstm->wf[i]=malloc((o->lstm->x+o->lstm->y)*sizeof(float));
+				o->lstm->wi[i]=malloc((o->lstm->x+o->lstm->y)*sizeof(float));
+				o->lstm->wo[i]=malloc((o->lstm->x+o->lstm->y)*sizeof(float));
+				assert(fread((void*)o->lstm->wx[i],sizeof(float),o->lstm->x+o->lstm->y,f)==o->lstm->x+o->lstm->y);
+				assert(fread((void*)o->lstm->wf[i],sizeof(float),o->lstm->x+o->lstm->y,f)==o->lstm->x+o->lstm->y);
+				assert(fread((void*)o->lstm->wi[i],sizeof(float),o->lstm->x+o->lstm->y,f)==o->lstm->x+o->lstm->y);
+				assert(fread((void*)o->lstm->wo[i],sizeof(float),o->lstm->x+o->lstm->y,f)==o->lstm->x+o->lstm->y);
+			}
+			assert(fread((void*)o->fc->b,sizeof(float),o->fc->y,f)==o->fc->y);
+			for (uint8_t i=0;i<o->fc->y;i++){
+				o->fc->w[i]=malloc(o->fc->x*sizeof(float));
+				assert(fread((void*)o->fc->w[i],sizeof(float),o->fc->x,f)==o->fc->x);
+			}
 		}
 		fclose(f);
 	}
@@ -371,6 +460,9 @@ LstmRnn init_lstm_rnn(const char* fp,uint8_t in,uint8_t hn,uint8_t on,float lr){
 
 
 float* lstm_rnn_predict(LstmRnn rnn,float** in_,uint32_t ln){
+	if (_bt==RNN_BACKEND_GPU){
+		return _gpu_lib_predict(rnn,in_,ln);
+	}
 	for (uint32_t i=0;i<ln-1;i++){
 		_lstm_fwd(rnn->lstm,in_[i]);
 	}
@@ -382,16 +474,21 @@ float* lstm_rnn_predict(LstmRnn rnn,float** in_,uint32_t ln){
 
 
 void lstm_rnn_train(LstmRnn rnn,float** in_,uint32_t ln,float** t){
-	float** l=malloc(ln*sizeof(float*));
-	for (uint32_t i=0;i<ln;i++){
-		l[i]=_fc_train(rnn->fc,_lstm_fwd_t(rnn->lstm,in_[i]),t[i],rnn->lr);
+	if (_bt==RNN_BACKEND_GPU){
+		_gpu_lib_train(rnn,in_,ln,t);
 	}
-	for (uint32_t i=ln;i>0;i--){
-		_lstm_train(rnn->lstm,l[i-1]);
-		free(l[i-1]);
+	else{
+		float** l=malloc(ln*sizeof(float*));
+		for (uint32_t i=0;i<ln;i++){
+			l[i]=_fc_train(rnn->fc,_lstm_fwd_t(rnn->lstm,in_[i]),t[i],rnn->lr);
+		}
+		for (uint32_t i=ln;i>0;i--){
+			_lstm_train(rnn->lstm,l[i-1]);
+			free(l[i-1]);
+		}
+		free(l);
+		_lstm_update(rnn->lstm,rnn->lr);
 	}
-	free(l);
-	_lstm_update(rnn->lstm,rnn->lr);
 }
 
 
@@ -399,19 +496,24 @@ void lstm_rnn_train(LstmRnn rnn,float** in_,uint32_t ln,float** t){
 void save_lstm_rnn(LstmRnn rnn){
 	FILE* f=NULL;
 	assert(fopen_s(&f,rnn->fp,"wb")==0);
-	assert(fwrite((void*)rnn->lstm->bx,sizeof(float),rnn->lstm->y,f)==rnn->lstm->y);
-	assert(fwrite((void*)rnn->lstm->bf,sizeof(float),rnn->lstm->y,f)==rnn->lstm->y);
-	assert(fwrite((void*)rnn->lstm->bi,sizeof(float),rnn->lstm->y,f)==rnn->lstm->y);
-	assert(fwrite((void*)rnn->lstm->bo,sizeof(float),rnn->lstm->y,f)==rnn->lstm->y);
-	for (uint8_t i=0;i<rnn->lstm->y;i++){
-		assert(fwrite((void*)rnn->lstm->wx[i],sizeof(float),rnn->lstm->x+rnn->lstm->y,f)==rnn->lstm->x+rnn->lstm->y);
-		assert(fwrite((void*)rnn->lstm->wf[i],sizeof(float),rnn->lstm->x+rnn->lstm->y,f)==rnn->lstm->x+rnn->lstm->y);
-		assert(fwrite((void*)rnn->lstm->wi[i],sizeof(float),rnn->lstm->x+rnn->lstm->y,f)==rnn->lstm->x+rnn->lstm->y);
-		assert(fwrite((void*)rnn->lstm->wo[i],sizeof(float),rnn->lstm->x+rnn->lstm->y,f)==rnn->lstm->x+rnn->lstm->y);
+	if (_bt==RNN_BACKEND_GPU){
+		_gpu_lib_save(rnn,f);
 	}
-	assert(fwrite((void*)rnn->fc->b,sizeof(float),rnn->fc->y,f)==rnn->fc->y);
-	for (uint8_t i=0;i<rnn->fc->y;i++){
-		assert(fwrite((void*)rnn->fc->w[i],sizeof(float),rnn->fc->x,f)==rnn->fc->x);
+	else{
+		assert(fwrite((void*)rnn->lstm->bx,sizeof(float),rnn->lstm->y,f)==rnn->lstm->y);
+		assert(fwrite((void*)rnn->lstm->bf,sizeof(float),rnn->lstm->y,f)==rnn->lstm->y);
+		assert(fwrite((void*)rnn->lstm->bi,sizeof(float),rnn->lstm->y,f)==rnn->lstm->y);
+		assert(fwrite((void*)rnn->lstm->bo,sizeof(float),rnn->lstm->y,f)==rnn->lstm->y);
+		for (uint8_t i=0;i<rnn->lstm->y;i++){
+			assert(fwrite((void*)rnn->lstm->wx[i],sizeof(float),rnn->lstm->x+rnn->lstm->y,f)==rnn->lstm->x+rnn->lstm->y);
+			assert(fwrite((void*)rnn->lstm->wf[i],sizeof(float),rnn->lstm->x+rnn->lstm->y,f)==rnn->lstm->x+rnn->lstm->y);
+			assert(fwrite((void*)rnn->lstm->wi[i],sizeof(float),rnn->lstm->x+rnn->lstm->y,f)==rnn->lstm->x+rnn->lstm->y);
+			assert(fwrite((void*)rnn->lstm->wo[i],sizeof(float),rnn->lstm->x+rnn->lstm->y,f)==rnn->lstm->x+rnn->lstm->y);
+		}
+		assert(fwrite((void*)rnn->fc->b,sizeof(float),rnn->fc->y,f)==rnn->fc->y);
+		for (uint8_t i=0;i<rnn->fc->y;i++){
+			assert(fwrite((void*)rnn->fc->w[i],sizeof(float),rnn->fc->x,f)==rnn->fc->x);
+		}
 	}
 	fclose(f);
 }
@@ -419,7 +521,43 @@ void save_lstm_rnn(LstmRnn rnn){
 
 
 void free_lstm_rnn(LstmRnn rnn){
+	if (_bt==RNN_BACKEND_GPU){
+		_gpu_lib_free(rnn);
+	}
+	else{
+		for (uint8_t i=0;i<rnn->lstm->y;i++){
+			free(rnn->lstm->wx[i]);
+			free(rnn->lstm->wf[i]);
+			free(rnn->lstm->wi[i]);
+			free(rnn->lstm->wo[i]);
+			if (rnn->lstm->_sz!=-1){
+				free(rnn->lstm->_wxg[i]);
+				free(rnn->lstm->_wfg[i]);
+				free(rnn->lstm->_wig[i]);
+				free(rnn->lstm->_wog[i]);
+			}
+		}
+		free(rnn->lstm->bx);
+		free(rnn->lstm->bf);
+		free(rnn->lstm->bi);
+		free(rnn->lstm->bo);
+		if (rnn->lstm->_sz!=-1){
+			assert(rnn->lstm->_sz==0);
+			free(rnn->lstm->_hg);
+			free(rnn->lstm->_cg);
+			free(rnn->lstm->_bxg);
+			free(rnn->lstm->_bfg);
+			free(rnn->lstm->_big);
+			free(rnn->lstm->_bog);
+		}
+		free(rnn->lstm->_c);
+		free(rnn->lstm->_h);
+		for (uint8_t i=0;i<rnn->fc->y;i++){
+			free(rnn->fc->w[i]);
+		}
+	}
 	free(rnn->lstm);
+	free(rnn->fc->b);
 	free(rnn->fc);
 	free(rnn);
 }
