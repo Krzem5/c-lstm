@@ -300,32 +300,32 @@ bool set_rnn_backend(enum RNN_BACKEND t){
 		atexit(_free_gpu_lib);
 		_gpu_lib_init_rand=(_gpu_lib_init_rand_t)GetProcAddress(_gpu_lib,"gpu_lstm_rnn_init_rand");
 		if (_gpu_lib_init_rand==NULL){
-			printf("ERROR: Funtion 'gpu_lstm_rnn_init_rand' not Found in the DLL.\n");
+			printf("ERROR: Function 'gpu_lstm_rnn_init_rand' not Found in the DLL.\n");
 			return false;
 		}
 		_gpu_lib_init_file=(_gpu_lib_init_file_t)GetProcAddress(_gpu_lib,"gpu_lstm_rnn_init_file");
 		if (_gpu_lib_init_file==NULL){
-			printf("ERROR: Funtion 'gpu_lstm_rnn_init_file' not Found in the DLL.\n");
+			printf("ERROR: Function 'gpu_lstm_rnn_init_file' not Found in the DLL.\n");
 			return false;
 		}
 		_gpu_lib_predict=(_gpu_lib_predict_t)GetProcAddress(_gpu_lib,"gpu_lstm_rnn_predict");
 		if (_gpu_lib_predict==NULL){
-			printf("ERROR: Funtion 'gpu_lstm_rnn_predict' not Found in the DLL.\n");
+			printf("ERROR: Function 'gpu_lstm_rnn_predict' not Found in the DLL.\n");
 			return false;
 		}
 		_gpu_lib_train=(_gpu_lib_train_t)GetProcAddress(_gpu_lib,"gpu_lstm_rnn_train");
 		if (_gpu_lib_train==NULL){
-			printf("ERROR: Funtion 'gpu_lstm_rnn_train' not Found in the DLL.\n");
+			printf("ERROR: Function 'gpu_lstm_rnn_train' not Found in the DLL.\n");
 			return false;
 		}
 		_gpu_lib_save=(_gpu_lib_save_t)GetProcAddress(_gpu_lib,"gpu_lstm_rnn_save");
 		if (_gpu_lib_save==NULL){
-			printf("ERROR: Funtion 'gpu_lstm_rnn_save' not Found in the DLL.\n");
+			printf("ERROR: Function 'gpu_lstm_rnn_save' not Found in the DLL.\n");
 			return false;
 		}
 		_gpu_lib_free=(_gpu_lib_free_t)GetProcAddress(_gpu_lib,"gpu_lstm_rnn_free");
 		if (_gpu_lib_free==NULL){
-			printf("ERROR: Funtion 'gpu_lstm_rnn_free' not Found in the DLL.\n");
+			printf("ERROR: Function 'gpu_lstm_rnn_free' not Found in the DLL.\n");
 			return false;
 		}
 	}

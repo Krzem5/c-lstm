@@ -1,9 +1,7 @@
 @echo off
 cls
 set _INCLUDE=%INCLUDE%
-set _LIB=%LIB%
 set INCLUDE=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.1\include;.;..\src\include;%INCLUDE%
-set LIB=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.1\lib\x64;.;%LIB%
 if exist build rmdir /s /q build
 mkdir build
 cd build
@@ -27,4 +25,3 @@ lstm.exe
 :end
 cd ../
 set INCLUDE=%_INCLUDE%
-set LIB=%_LIB%
