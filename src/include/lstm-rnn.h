@@ -7,7 +7,6 @@
 
 
 #ifndef __cplusplus
-#ifndef __LSTM_RNN_ONLY_STRUCT__
 #ifdef NULL
 #undef NULL
 #endif
@@ -22,7 +21,6 @@
 			raise(SIGABRT); \
 		} \
 	} while (0)
-#endif
 #else
 extern "C" {
 #endif
@@ -30,6 +28,7 @@ extern "C" {
 
 
 typedef struct __LSTMRNN* LstmRnn;
+typedef float* Dataset;
 
 
 
@@ -43,14 +42,50 @@ enum RNN_BACKEND{
 struct __LSTMRNN_LSTM_LAYER{
 	uint8_t x;
 	uint8_t y;
-	float** wx;
-	float** wf;
-	float** wi;
-	float** wo;
+	float* wx;
+	float* wf;
+	float* wi;
+	float* wo;
 	float* bx;
 	float* bf;
 	float* bi;
 	float* bo;
+	uint16_t _xy;
+	float* _cl;
+	float* _xhl;
+	float* _cal;
+	float* _fl;
+	float* _il;
+	float* _ol;
+	float* _outl;
+	float* _c;
+	float* _h;
+	float* _hg;
+	float* _cg;
+	float* _wxg;
+	float* _wfg;
+	float* _wig;
+	float* _wog;
+	float* _bxg;
+	float* _bfg;
+	float* _big;
+	float* _bog;
+};
+
+
+
+struct __LSTMRNN_LSTM_LAYER2{
+	uint8_t x;
+	uint8_t y;
+	float* wx;
+	float* wf;
+	float* wi;
+	float* wo;
+	float* bx;
+	float* bf;
+	float* bi;
+	float* bo;
+	uint16_t _xy;
 	uint32_t _sz;
 	float** _cl;
 	float** _xhl;
@@ -63,10 +98,10 @@ struct __LSTMRNN_LSTM_LAYER{
 	float* _h;
 	float* _hg;
 	float* _cg;
-	float** _wxg;
-	float** _wfg;
-	float** _wig;
-	float** _wog;
+	float* _wxg;
+	float* _wfg;
+	float* _wig;
+	float* _wog;
 	float* _bxg;
 	float* _bfg;
 	float* _big;
@@ -78,7 +113,7 @@ struct __LSTMRNN_LSTM_LAYER{
 struct __LSTMRNN_FULLY_CONNECTED_LAYER{
 	uint8_t x;
 	uint8_t y;
-	float** w;
+	float* w;
 	float* b;
 };
 
@@ -90,8 +125,20 @@ struct __LSTMRNN{
 	uint8_t h;
 	uint8_t o;
 	float lr;
-	struct __LSTMRNN_LSTM_LAYER* lstm;
-	struct __LSTMRNN_FULLY_CONNECTED_LAYER* fc;
+	union{
+		struct _cpu{
+			struct __LSTMRNN_LSTM_LAYER2* lstm;
+			struct __LSTMRNN_FULLY_CONNECTED_LAYER* fc;
+		} cpu;
+		struct _gpu{
+			struct __LSTMRNN_LSTM_LAYER* lstm;
+			struct __LSTMRNN_FULLY_CONNECTED_LAYER* fc;
+			struct __LSTMRNN_LSTM_LAYER* lstm_d;
+			struct __LSTMRNN_FULLY_CONNECTED_LAYER* fc_d;
+			float* cfio;
+			float* to;
+		} gpu;
+	} dt;
 };
 
 
@@ -104,15 +151,27 @@ bool set_rnn_backend(enum RNN_BACKEND t);
 
 
 
+Dataset create_dataset(float* dt,size_t sz);
+
+
+
 LstmRnn init_lstm_rnn(const char* fp,uint8_t i,uint8_t h,uint8_t o,float lr);
 
 
 
-float* lstm_rnn_predict(LstmRnn rnn,float** dt,uint32_t ln);
+float* lstm_rnn_predict_dataset(LstmRnn rnn,Dataset in_,uint32_t ln);
 
 
 
-void lstm_rnn_train(LstmRnn rnn,float** in_,uint32_t ln,float** t);
+float* lstm_rnn_predict(LstmRnn rnn,float* in_,uint32_t ln);
+
+
+
+void lstm_rnn_train_multiple(LstmRnn rnn,Dataset dts,uint8_t e,uint32_t ln,uint32_t s);
+
+
+
+void lstm_rnn_train(LstmRnn rnn,float* in_,uint32_t ln,float* t);
 
 
 
@@ -121,6 +180,10 @@ void save_lstm_rnn(LstmRnn rnn);
 
 
 void free_lstm_rnn(LstmRnn rnn);
+
+
+
+void free_dataset(Dataset dts);
 
 
 
