@@ -42,12 +42,7 @@ extern "C" {
 #endif
 #define KERNEL_LOOP_IDX_X (blockIdx.x*blockDim.x+threadIdx.x)
 #define KERNEL_LOOP_STRIDE_X (blockDim.x*gridDim.x)
-#define KERNEL_LOOP_IDX_Y (blockIdx.y*blockDim.y+threadIdx.y)
-#define KERNEL_LOOP_STRIDE_Y (blockDim.y*gridDim.y)
-#define KERNEL_LOOP_IDX (KERNEL_LOOP_IDX_Y*KERNEL_LOOP_STRIDE_X+KERNEL_LOOP_IDX_X)
-#define KERNEL_LOOP_STRIDE (KERNEL_LOOP_STRIDE_Y*KERNEL_LOOP_STRIDE_X)
 #define BLK_SIZE 64
-#define BLK_SIZE_2D 32
 #define DEVICE_ID 0
 
 

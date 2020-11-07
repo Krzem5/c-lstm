@@ -186,19 +186,19 @@ void _graph_rnn(LstmRnn rnn){
 
 
 int main(int argc,const char** argv){
-	srand(1234/*(unsigned int)time(NULL)*/);
+	srand((unsigned int)time(NULL));
 	for (size_t i=0;i<DATASET_SIZE;i++){
 		DATA[i]=sinf(i*0.15f)*sinf(i*0.075f);
 	}
 	SetConsoleOutputCP(CP_UTF8);
 	SetConsoleMode(GetStdHandle(-11),7);
 	SetPriorityClass(GetCurrentProcess(),HIGH_PRIORITY_CLASS);
-	if (set_rnn_backend(RNN_BACKEND_GPU)==false){
+	if (set_rnn_backend(RNN_BACKEND_CPU)==false){
 		return 1;
 	}
 	dts=create_dataset(DATA,DATASET_SIZE);
 	LstmRnn rnn=init_lstm_rnn("../rnn-save3.rnn",1,HIDDEN_NODES,1,0.01f);
-	// lstm_rnn_train_multiple(rnn,dts,TOTAL_EPOCHS,DATASET_ENTRIES,SEQ_LEN);
+	lstm_rnn_train_multiple(rnn,dts,TOTAL_EPOCHS,DATASET_ENTRIES,SEQ_LEN);
 	// save_lstm_rnn(rnn);
 	_graph_rnn(rnn);
 	free_lstm_rnn(rnn);
