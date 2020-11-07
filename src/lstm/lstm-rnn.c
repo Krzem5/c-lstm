@@ -68,6 +68,7 @@ float* _lstm_fwd(struct __LSTMRNN_LSTM_LAYER2* lstm,float* in_){
 		}
 		lstm->_c[i]=tanhf(ca)*sigmoidf(i_)+lstm->_c[i]*sigmoidf(f);
 		lstm->_h[i]=tanhf(lstm->_c[i])*sigmoidf(o);
+		// printf("%f %f\n",lstm->_c[i],lstm->_h[i]);
 	}
 	return lstm->_h;
 }

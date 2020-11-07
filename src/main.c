@@ -10,7 +10,7 @@
 #define HIDDEN_NODES 150
 #define DATASET_ENTRIES 1000
 #define SEQ_LEN 20
-#define TOTAL_EPOCHS 1
+#define TOTAL_EPOCHS 10
 #define DATASET_SIZE (size_t)(DATASET_ENTRIES-1+SEQ_LEN+1)
 #define GRAPH_STRIDE 1
 #define GRAPH_HEIGHT 20
@@ -186,7 +186,7 @@ void _graph_rnn(LstmRnn rnn){
 
 
 int main(int argc,const char** argv){
-	srand((unsigned int)time(0));
+	srand(1234/*(unsigned int)time(NULL)*/);
 	for (size_t i=0;i<DATASET_SIZE;i++){
 		DATA[i]=sinf(i*0.15f)*sinf(i*0.075f);
 	}
@@ -198,7 +198,7 @@ int main(int argc,const char** argv){
 	}
 	dts=create_dataset(DATA,DATASET_SIZE);
 	LstmRnn rnn=init_lstm_rnn("../rnn-save3.rnn",1,HIDDEN_NODES,1,0.01f);
-	lstm_rnn_train_multiple(rnn,dts,TOTAL_EPOCHS,DATASET_ENTRIES,SEQ_LEN);
+	// lstm_rnn_train_multiple(rnn,dts,TOTAL_EPOCHS,DATASET_ENTRIES,SEQ_LEN);
 	// save_lstm_rnn(rnn);
 	_graph_rnn(rnn);
 	free_lstm_rnn(rnn);

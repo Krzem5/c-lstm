@@ -13,7 +13,7 @@ extern "C" {
 #define _str2(x) #x
 #define _str(x) _str2(x)
 #define CUDA_CALL(f) \
-	do{ \
+	do { \
 		cudaError_t __e=f; \
 		if (__e!=cudaSuccess){ \
 			printf("%s: Line %i (%s): %s\n",__FILE__,__LINE__,__func__,cudaGetErrorString(__e)); \
@@ -40,7 +40,15 @@ extern "C" {
 #define CUDA_GPU_CALL_CUSTOM(f,n,sz,...) f<<<n,sz>>>(__VA_ARGS__)
 #define CUDA_GPU_CALL(f,sz,...) CUDA_GPU_CALL_CUSTOM(f,((sz)+BLK_SIZE-1)/BLK_SIZE,BLK_SIZE,__VA_ARGS__)
 #endif
+#define KERNEL_LOOP_IDX_X (blockIdx.x*blockDim.x+threadIdx.x)
+#define KERNEL_LOOP_STRIDE_X (blockDim.x*gridDim.x)
+#define KERNEL_LOOP_IDX_Y (blockIdx.y*blockDim.y+threadIdx.y)
+#define KERNEL_LOOP_STRIDE_Y (blockDim.y*gridDim.y)
+#define KERNEL_LOOP_IDX (KERNEL_LOOP_IDX_Y*KERNEL_LOOP_STRIDE_X+KERNEL_LOOP_IDX_X)
+#define KERNEL_LOOP_STRIDE (KERNEL_LOOP_STRIDE_Y*KERNEL_LOOP_STRIDE_X)
 #define BLK_SIZE 64
+#define BLK_SIZE_2D 32
+#define DEVICE_ID 0
 
 
 
