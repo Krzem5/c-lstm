@@ -387,6 +387,7 @@ LstmRnn init_lstm_rnn(const char* fp,uint8_t in,uint8_t hn,uint8_t on,float lr){
 		o->dt.cpu.lstm=malloc(sizeof(struct __LSTMRNN_LSTM_LAYER2));
 		o->dt.cpu.lstm->x=in;
 		o->dt.cpu.lstm->y=hn;
+		o->dt.cpu.lstm->_xy=o->dt.cpu.lstm->x+o->dt.cpu.lstm->y;
 		o->dt.cpu.lstm->wx=malloc(o->dt.cpu.lstm->y*o->dt.cpu.lstm->_xy*sizeof(float));
 		o->dt.cpu.lstm->wf=malloc(o->dt.cpu.lstm->y*o->dt.cpu.lstm->_xy*sizeof(float));
 		o->dt.cpu.lstm->wi=malloc(o->dt.cpu.lstm->y*o->dt.cpu.lstm->_xy*sizeof(float));
@@ -395,7 +396,6 @@ LstmRnn init_lstm_rnn(const char* fp,uint8_t in,uint8_t hn,uint8_t on,float lr){
 		o->dt.cpu.lstm->bf=malloc(o->dt.cpu.lstm->y*sizeof(float));
 		o->dt.cpu.lstm->bi=malloc(o->dt.cpu.lstm->y*sizeof(float));
 		o->dt.cpu.lstm->bo=malloc(o->dt.cpu.lstm->y*sizeof(float));
-		o->dt.cpu.lstm->_xy=o->dt.cpu.lstm->x+o->dt.cpu.lstm->y;
 		o->dt.cpu.lstm->_sz=-1;
 		o->dt.cpu.lstm->_cl=NULL;
 		o->dt.cpu.lstm->_xhl=NULL;
