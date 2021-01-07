@@ -48,7 +48,7 @@ __global__ void _fill_rand(curandState* rs,float* l,size_t ln,float a,float b){
 
 
 
-__global__ void _clear_lstm_w_k(struct __LSTMRNN_LSTM_LAYER* lstm){
+__global__ void _clear_lstm_w_k(struct __LSTMRNN_LSTM_LAYER_GPU* lstm){
 	for (uint64_t i=KERNEL_LOOP_IDX_X;i<lstm->y*lstm->_xy;i+=KERNEL_LOOP_STRIDE_X){
 		lstm->_wxg[i]=0;
 		lstm->_wfg[i]=0;
@@ -59,7 +59,7 @@ __global__ void _clear_lstm_w_k(struct __LSTMRNN_LSTM_LAYER* lstm){
 
 
 
-__global__ void _clear_lstm_b_k(struct __LSTMRNN_LSTM_LAYER* lstm){
+__global__ void _clear_lstm_b_k(struct __LSTMRNN_LSTM_LAYER_GPU* lstm){
 	for (uint64_t i=KERNEL_LOOP_IDX_X;i<lstm->y;i+=KERNEL_LOOP_STRIDE_X){
 		lstm->_hg[i]=0;
 		lstm->_cg[i]=0;
@@ -101,7 +101,7 @@ __global__ void _clear_to(float* to,uint8_t l){
 
 
 
-__global__ void _clear_lstm_k(struct __LSTMRNN_LSTM_LAYER* lstm,uint32_t s){
+__global__ void _clear_lstm_k(struct __LSTMRNN_LSTM_LAYER_GPU* lstm,uint32_t s){
 	for (uint64_t i=KERNEL_LOOP_IDX_X;i<lstm->y*s;i+=KERNEL_LOOP_STRIDE_X){
 		lstm->_cl[i]=0;
 		lstm->_cal[i]=0;
@@ -114,7 +114,7 @@ __global__ void _clear_lstm_k(struct __LSTMRNN_LSTM_LAYER* lstm,uint32_t s){
 
 
 
-__global__ void _clear_lstm2_k(struct __LSTMRNN_LSTM_LAYER* lstm,uint32_t s){
+__global__ void _clear_lstm2_k(struct __LSTMRNN_LSTM_LAYER_GPU* lstm,uint32_t s){
 	for (uint64_t i=KERNEL_LOOP_IDX_X;i<lstm->_xy*s;i+=KERNEL_LOOP_STRIDE_X){
 		lstm->_xhl[i]=0;
 	}
@@ -122,7 +122,7 @@ __global__ void _clear_lstm2_k(struct __LSTMRNN_LSTM_LAYER* lstm,uint32_t s){
 
 
 
-__global__ void _clear_lstm_ch_k(struct __LSTMRNN_LSTM_LAYER* lstm){
+__global__ void _clear_lstm_ch_k(struct __LSTMRNN_LSTM_LAYER_GPU* lstm){
 	for (uint8_t i=KERNEL_LOOP_IDX_X;i<lstm->y;i+=KERNEL_LOOP_STRIDE_X){
 		lstm->_c[i]=0;
 		lstm->_h[i]=0;
@@ -131,7 +131,7 @@ __global__ void _clear_lstm_ch_k(struct __LSTMRNN_LSTM_LAYER* lstm){
 
 
 
-__global__ void _lstm_fwd_k(struct __LSTMRNN_LSTM_LAYER* lstm,float* in_,float* cfio){
+__global__ void _lstm_fwd_k(struct __LSTMRNN_LSTM_LAYER_GPU* lstm,float* in_,float* cfio){
 	for (uint64_t i=KERNEL_LOOP_IDX_X;i<lstm->y;i+=KERNEL_LOOP_STRIDE_X){
 		for (uint16_t j=0;j<lstm->_xy;j++){
 			uint64_t k=i*lstm->_xy+j;
@@ -146,7 +146,7 @@ __global__ void _lstm_fwd_k(struct __LSTMRNN_LSTM_LAYER* lstm,float* in_,float* 
 
 
 
-__global__ void _lstm_fwd_t_k(struct __LSTMRNN_LSTM_LAYER* lstm,float* in_,uint32_t k_){
+__global__ void _lstm_fwd_t_k(struct __LSTMRNN_LSTM_LAYER_GPU* lstm,float* in_,uint32_t k_){
 	float* lc=lstm->_cl+k_*lstm->y;
 	float* xh=lstm->_xhl+k_*lstm->_xy;
 	float* ca=lstm->_cal+k_*lstm->y;
@@ -175,7 +175,7 @@ __global__ void _lstm_fwd_t_k(struct __LSTMRNN_LSTM_LAYER* lstm,float* in_,uint3
 
 
 
-__global__ void _lstm_fwd_sum_k(struct __LSTMRNN_LSTM_LAYER* lstm,float* cfio){
+__global__ void _lstm_fwd_sum_k(struct __LSTMRNN_LSTM_LAYER_GPU* lstm,float* cfio){
 	for (uint16_t i=KERNEL_LOOP_IDX_X;i<lstm->y;i+=KERNEL_LOOP_STRIDE_X){
 		lstm->_c[i]=tanhf_k(cfio[i*4]+lstm->bx[i])*sigmoidf_k(cfio[i*4+2]+lstm->bi[i])+lstm->_c[i]*sigmoidf_k(cfio[i*4+1]+lstm->bf[i]);
 		lstm->_h[i]=tanhf_k(lstm->_c[i])*sigmoidf_k(cfio[i*4+3]+lstm->bo[i]);
@@ -184,7 +184,7 @@ __global__ void _lstm_fwd_sum_k(struct __LSTMRNN_LSTM_LAYER* lstm,float* cfio){
 
 
 
-__global__ void _lstm_fwd_sum_t_k(struct __LSTMRNN_LSTM_LAYER* lstm,uint32_t k){
+__global__ void _lstm_fwd_sum_t_k(struct __LSTMRNN_LSTM_LAYER_GPU* lstm,uint32_t k){
 	float* ca=lstm->_cal+k*lstm->y;
 	float* f=lstm->_fl+k*lstm->y;
 	float* i_=lstm->_il+k*lstm->y;
@@ -218,7 +218,7 @@ __global__ void _fc_fwd_k(struct __LSTMRNN_FULLY_CONNECTED_LAYER* fc,float* in_,
 
 
 
-__global__ void _fc_train_k(struct __LSTMRNN_LSTM_LAYER* lstm,struct __LSTMRNN_FULLY_CONNECTED_LAYER* fc,float* in_,float* p,float* tg,float lr,float* o){
+__global__ void _fc_train_k(struct __LSTMRNN_LSTM_LAYER_GPU* lstm,struct __LSTMRNN_FULLY_CONNECTED_LAYER* fc,float* in_,float* p,float* tg,float lr,float* o){
 	for (uint64_t i=KERNEL_LOOP_IDX_X;i<fc->y;i+=KERNEL_LOOP_STRIDE_X){
 		p[i]-=tg[i];
 		fc->b[i]-=p[i]*lr;
@@ -235,7 +235,7 @@ __global__ void _fc_train_k(struct __LSTMRNN_LSTM_LAYER* lstm,struct __LSTMRNN_F
 
 
 
-__global__ void _lstm_train_k(struct __LSTMRNN_LSTM_LAYER* lstm,uint32_t k,float* tg){
+__global__ void _lstm_train_k(struct __LSTMRNN_LSTM_LAYER_GPU* lstm,uint32_t k,float* tg){
 	float* c=lstm->_cl+k*lstm->y;
 	float* xh=lstm->_xhl+k*lstm->_xy;
 	float* ca=lstm->_cal+k*lstm->y;
@@ -268,7 +268,7 @@ __global__ void _lstm_train_k(struct __LSTMRNN_LSTM_LAYER* lstm,uint32_t k,float
 
 
 
-__global__ void _lstm_update_w_k(struct __LSTMRNN_LSTM_LAYER* lstm,float lr){
+__global__ void _lstm_update_w_k(struct __LSTMRNN_LSTM_LAYER_GPU* lstm,float lr){
 	for (uint64_t i=KERNEL_LOOP_IDX_X;i<lstm->y*lstm->_xy;i+=KERNEL_LOOP_STRIDE_X){
 		lstm->wx[i]-=lstm->_wxg[i]*lr;
 		lstm->wf[i]-=lstm->_wfg[i]*lr;
@@ -283,7 +283,7 @@ __global__ void _lstm_update_w_k(struct __LSTMRNN_LSTM_LAYER* lstm,float lr){
 
 
 
-__global__ void _lstm_update_b_k(struct __LSTMRNN_LSTM_LAYER* lstm,float lr){
+__global__ void _lstm_update_b_k(struct __LSTMRNN_LSTM_LAYER_GPU* lstm,float lr){
 	for (uint64_t i=KERNEL_LOOP_IDX_X;i<lstm->y;i+=KERNEL_LOOP_STRIDE_X){
 		lstm->_c[i]=0;
 		lstm->_h[i]=0;
@@ -323,7 +323,7 @@ Dataset gpu_lstm_rnn_create_dataset(float* dt,size_t sz){
 
 
 void gpu_lstm_rnn_init_rand(LstmRnn rnn){
-	rnn->dt.gpu.lstm=(struct __LSTMRNN_LSTM_LAYER*)malloc(sizeof(struct __LSTMRNN_LSTM_LAYER));
+	rnn->dt.gpu.lstm=(struct __LSTMRNN_LSTM_LAYER_GPU*)malloc(sizeof(struct __LSTMRNN_LSTM_LAYER_GPU));
 	rnn->dt.gpu.lstm->x=rnn->i;
 	rnn->dt.gpu.lstm->y=rnn->h;
 	rnn->dt.gpu.lstm->wx=NULL;
@@ -393,8 +393,8 @@ void gpu_lstm_rnn_init_rand(LstmRnn rnn){
 	CUDA_GPU_CALL_CUSTOM(_fill_rand,fc_n,_BLK_SIZE,rs,rnn->dt.gpu.fc->w,rnn->dt.gpu.fc->y*rnn->dt.gpu.fc->x,1,-1);
 	CUDA_CALL(cudaDeviceSynchronize());
 	CUDA_CALL(cudaFree(rs));
-	CUDA_CALL(cudaMalloc(&rnn->dt.gpu.lstm_d,sizeof(struct __LSTMRNN_LSTM_LAYER)));
-	CUDA_CALL(cudaMemcpy(rnn->dt.gpu.lstm_d,rnn->dt.gpu.lstm,sizeof(struct __LSTMRNN_LSTM_LAYER),cudaMemcpyHostToDevice));
+	CUDA_CALL(cudaMalloc(&rnn->dt.gpu.lstm_d,sizeof(struct __LSTMRNN_LSTM_LAYER_GPU)));
+	CUDA_CALL(cudaMemcpy(rnn->dt.gpu.lstm_d,rnn->dt.gpu.lstm,sizeof(struct __LSTMRNN_LSTM_LAYER_GPU),cudaMemcpyHostToDevice));
 	CUDA_CALL(cudaMalloc(&rnn->dt.gpu.fc_d,sizeof(struct __LSTMRNN_FULLY_CONNECTED_LAYER)));
 	CUDA_CALL(cudaMemcpy(rnn->dt.gpu.fc_d,rnn->dt.gpu.fc,sizeof(struct __LSTMRNN_FULLY_CONNECTED_LAYER),cudaMemcpyHostToDevice));
 	CUDA_GPU_CALL(_clear_lstm_ch_k,rnn->dt.gpu.lstm->y,rnn->dt.gpu.lstm_d);
@@ -463,7 +463,7 @@ void gpu_lstm_rnn_train_multiple(LstmRnn rnn,Dataset dts,uint8_t e,uint32_t ln,u
 		CUDA_CALL(cudaMalloc(&rnn->dt.gpu.lstm->_il,rnn->dt.gpu.lstm->y*s*sizeof(float)));
 		CUDA_CALL(cudaMalloc(&rnn->dt.gpu.lstm->_ol,rnn->dt.gpu.lstm->y*s*sizeof(float)));
 		CUDA_CALL(cudaMalloc(&rnn->dt.gpu.lstm->_outl,rnn->dt.gpu.lstm->y*s*sizeof(float)));
-		CUDA_CALL(cudaMemcpy(rnn->dt.gpu.lstm_d,rnn->dt.gpu.lstm,sizeof(struct __LSTMRNN_LSTM_LAYER),cudaMemcpyHostToDevice));
+		CUDA_CALL(cudaMemcpy(rnn->dt.gpu.lstm_d,rnn->dt.gpu.lstm,sizeof(struct __LSTMRNN_LSTM_LAYER_GPU),cudaMemcpyHostToDevice));
 		CUDA_GPU_CALL(_clear_lstm_w_k,rnn->dt.gpu.lstm->y*rnn->dt.gpu.lstm->_xy,rnn->dt.gpu.lstm_d);
 		CUDA_GPU_CALL(_clear_lstm_b_k,rnn->dt.gpu.lstm->y,rnn->dt.gpu.lstm_d);
 	}

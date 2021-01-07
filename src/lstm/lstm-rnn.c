@@ -53,7 +53,7 @@ float sigmoid_d(float x){
 
 
 
-float* _lstm_fwd(struct __LSTMRNN_LSTM_LAYER2* lstm,float* in_){
+float* _lstm_fwd(struct __LSTMRNN_LSTM_LAYER_CPU* lstm,float* in_){
 	for (uint8_t i=0;i<lstm->y;i++){
 		float ca=lstm->bx[i];
 		float f=lstm->bf[i];
@@ -68,14 +68,13 @@ float* _lstm_fwd(struct __LSTMRNN_LSTM_LAYER2* lstm,float* in_){
 		}
 		lstm->_c[i]=tanhf(ca)*sigmoidf(i_)+lstm->_c[i]*sigmoidf(f);
 		lstm->_h[i]=tanhf(lstm->_c[i])*sigmoidf(o);
-		// printf("%f %f\n",lstm->_c[i],lstm->_h[i]);
 	}
 	return lstm->_h;
 }
 
 
 
-float* _lstm_fwd_t(struct __LSTMRNN_LSTM_LAYER2* lstm,float* in_){
+float* _lstm_fwd_t(struct __LSTMRNN_LSTM_LAYER_CPU* lstm,float* in_){
 	if (lstm->_sz==-1){
 		lstm->_hg=malloc(lstm->y*sizeof(float));
 		lstm->_cg=malloc(lstm->y*sizeof(float));
@@ -160,7 +159,7 @@ float* _lstm_fwd_t(struct __LSTMRNN_LSTM_LAYER2* lstm,float* in_){
 
 
 
-void _lstm_train(struct __LSTMRNN_LSTM_LAYER2* lstm,float* tg){
+void _lstm_train(struct __LSTMRNN_LSTM_LAYER_CPU* lstm,float* tg){
 	lstm->_sz--;
 	float* c=lstm->_cl[lstm->_sz];
 	float* xh=lstm->_xhl[lstm->_sz];
@@ -208,7 +207,7 @@ void _lstm_train(struct __LSTMRNN_LSTM_LAYER2* lstm,float* tg){
 
 
 
-void _lstm_update(struct __LSTMRNN_LSTM_LAYER2* lstm,float lr){
+void _lstm_update(struct __LSTMRNN_LSTM_LAYER_CPU* lstm,float lr){
 	lstm->_sz=0;
 	free(lstm->_cl);
 	free(lstm->_xhl);
@@ -252,7 +251,7 @@ void _lstm_update(struct __LSTMRNN_LSTM_LAYER2* lstm,float lr){
 
 
 
-void _lstm_reset(struct __LSTMRNN_LSTM_LAYER2* lstm){
+void _lstm_reset(struct __LSTMRNN_LSTM_LAYER_CPU* lstm){
 	for (uint8_t i=0;i<lstm->y;i++){
 		lstm->_c[i]=0;
 		lstm->_h[i]=0;
@@ -384,7 +383,7 @@ LstmRnn init_lstm_rnn(const char* fp,uint8_t in,uint8_t hn,uint8_t on,float lr){
 	o->o=on;
 	o->lr=lr;
 	if (_bt==RNN_BACKEND_CPU){
-		o->dt.cpu.lstm=malloc(sizeof(struct __LSTMRNN_LSTM_LAYER2));
+		o->dt.cpu.lstm=malloc(sizeof(struct __LSTMRNN_LSTM_LAYER_CPU));
 		o->dt.cpu.lstm->x=in;
 		o->dt.cpu.lstm->y=hn;
 		o->dt.cpu.lstm->_xy=o->dt.cpu.lstm->x+o->dt.cpu.lstm->y;

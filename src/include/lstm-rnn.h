@@ -39,7 +39,7 @@ enum RNN_BACKEND{
 
 
 
-struct __LSTMRNN_LSTM_LAYER{
+struct __LSTMRNN_LSTM_LAYER_GPU{
 	uint8_t x;
 	uint8_t y;
 	float* wx;
@@ -74,7 +74,7 @@ struct __LSTMRNN_LSTM_LAYER{
 
 
 
-struct __LSTMRNN_LSTM_LAYER2{
+struct __LSTMRNN_LSTM_LAYER_CPU{
 	uint8_t x;
 	uint8_t y;
 	float* wx;
@@ -125,15 +125,15 @@ struct __LSTMRNN{
 	uint8_t h;
 	uint8_t o;
 	float lr;
-	union{
+	union __LSTMRNN_DATA{
 		struct _cpu{
-			struct __LSTMRNN_LSTM_LAYER2* lstm;
+			struct __LSTMRNN_LSTM_LAYER_CPU* lstm;
 			struct __LSTMRNN_FULLY_CONNECTED_LAYER* fc;
 		} cpu;
 		struct _gpu{
-			struct __LSTMRNN_LSTM_LAYER* lstm;
+			struct __LSTMRNN_LSTM_LAYER_GPU* lstm;
 			struct __LSTMRNN_FULLY_CONNECTED_LAYER* fc;
-			struct __LSTMRNN_LSTM_LAYER* lstm_d;
+			struct __LSTMRNN_LSTM_LAYER_GPU* lstm_d;
 			struct __LSTMRNN_FULLY_CONNECTED_LAYER* fc_d;
 			float* cfio;
 			float* to;
