@@ -14,7 +14,6 @@
 int _mn_sp=0;
 int _mx_sp=0;
 cudaStream_t _s1;
-cudaStream_t _s2;
 
 
 
@@ -565,7 +564,7 @@ void gpu_lstm_rnn_free_dataset(Dataset dts){
 
 
 
-int WINAPI DllMain(void* dll,unsigned long r,void* rs){
+BOOL WINAPI DllMain(void* dll,unsigned long r,void* rs){
 	(void)dll;
 	(void)r;
 	(void)rs;
