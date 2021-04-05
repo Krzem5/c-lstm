@@ -199,7 +199,7 @@ int main(int argc,const char** argv){
 	dts=create_dataset(DATA,DATASET_SIZE);
 	LstmRnn rnn=init_lstm_rnn("../rnn-save3.rnn",1,HIDDEN_NODES,1,0.01f);
 	lstm_rnn_train_multiple(rnn,dts,TOTAL_EPOCHS,DATASET_ENTRIES,SEQ_LEN);
-	save_lstm_rnn(rnn);
+	// save_lstm_rnn(rnn);
 	_graph_rnn(rnn);
 	free_lstm_rnn(rnn);
 	free_dataset(dts);
