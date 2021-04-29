@@ -375,21 +375,20 @@ void gpu_lstm_rnn_init_rand(LstmRnn rnn){
 	CUDA_CALL(cudaMalloc(&rnn->dt.gpu.cfio,rnn->dt.gpu.lstm->y*4*sizeof(float)));
 	CUDA_CALL(cudaMalloc(&rnn->dt.gpu.to,rnn->dt.gpu.fc->y*sizeof(float)));
 	curandState* rs=NULL;
-	#define _BLK_SIZE 64
-	uint16_t lstmw_n=(rnn->dt.gpu.lstm->y*rnn->dt.gpu.lstm->_xy+_BLK_SIZE-1)/_BLK_SIZE;
-	uint16_t lstmb_n=(rnn->dt.gpu.lstm->y+_BLK_SIZE-1)/_BLK_SIZE;
-	uint16_t fc_n=(rnn->dt.gpu.fc->y+_BLK_SIZE-1)/_BLK_SIZE;
-	CUDA_CALL(cudaMalloc(&rs,(lstmw_n>fc_n?lstmw_n:fc_n)*_BLK_SIZE*sizeof(curandState)));
-	CUDA_GPU_CALL_CUSTOM(_init_rand,(lstmw_n>fc_n?lstmw_n:fc_n),_BLK_SIZE,1234/*time(NULL)*/,rs);
-	CUDA_GPU_CALL_CUSTOM(_fill_rand,lstmw_n,_BLK_SIZE,rs,rnn->dt.gpu.lstm->wx,rnn->dt.gpu.lstm->y*rnn->dt.gpu.lstm->_xy,0.1f,-0.1f);
-	CUDA_GPU_CALL_CUSTOM(_fill_rand,lstmw_n,_BLK_SIZE,rs,rnn->dt.gpu.lstm->wf,rnn->dt.gpu.lstm->y*rnn->dt.gpu.lstm->_xy,0.1f,-0.1f);
-	CUDA_GPU_CALL_CUSTOM(_fill_rand,lstmw_n,_BLK_SIZE,rs,rnn->dt.gpu.lstm->wi,rnn->dt.gpu.lstm->y*rnn->dt.gpu.lstm->_xy,0.1f,-0.1f);
-	CUDA_GPU_CALL_CUSTOM(_fill_rand,lstmw_n,_BLK_SIZE,rs,rnn->dt.gpu.lstm->wo,rnn->dt.gpu.lstm->y*rnn->dt.gpu.lstm->_xy,0.1f,-0.1f);
-	CUDA_GPU_CALL_CUSTOM(_fill_rand,lstmb_n,_BLK_SIZE,rs,rnn->dt.gpu.lstm->bx,rnn->dt.gpu.lstm->y,0.1f,-0.1f);
-	CUDA_GPU_CALL_CUSTOM(_fill_rand,lstmb_n,_BLK_SIZE,rs,rnn->dt.gpu.lstm->bf,rnn->dt.gpu.lstm->y,0.1f,-0.1f);
-	CUDA_GPU_CALL_CUSTOM(_fill_rand,lstmb_n,_BLK_SIZE,rs,rnn->dt.gpu.lstm->bi,rnn->dt.gpu.lstm->y,0.1f,-0.1f);
-	CUDA_GPU_CALL_CUSTOM(_fill_rand,lstmb_n,_BLK_SIZE,rs,rnn->dt.gpu.lstm->bo,rnn->dt.gpu.lstm->y,0.1f,-0.1f);
-	CUDA_GPU_CALL_CUSTOM(_fill_rand,fc_n,_BLK_SIZE,rs,rnn->dt.gpu.fc->w,rnn->dt.gpu.fc->y*rnn->dt.gpu.fc->x,1,-1);
+	uint16_t lstmw_n=(rnn->dt.gpu.lstm->y*rnn->dt.gpu.lstm->_xy+BLK_SIZE-1)/BLK_SIZE;
+	uint16_t lstmb_n=(rnn->dt.gpu.lstm->y+BLK_SIZE-1)/BLK_SIZE;
+	uint16_t fc_n=(rnn->dt.gpu.fc->y+BLK_SIZE-1)/BLK_SIZE;
+	CUDA_CALL(cudaMalloc(&rs,(lstmw_n>fc_n?lstmw_n:fc_n)*BLK_SIZE*sizeof(curandState)));
+	CUDA_GPU_CALL_CUSTOM(_init_rand,(lstmw_n>fc_n?lstmw_n:fc_n),BLK_SIZE,time(NULL),rs);
+	CUDA_GPU_CALL_CUSTOM(_fill_rand,lstmw_n,BLK_SIZE,rs,rnn->dt.gpu.lstm->wx,rnn->dt.gpu.lstm->y*rnn->dt.gpu.lstm->_xy,0.1f,-0.1f);
+	CUDA_GPU_CALL_CUSTOM(_fill_rand,lstmw_n,BLK_SIZE,rs,rnn->dt.gpu.lstm->wf,rnn->dt.gpu.lstm->y*rnn->dt.gpu.lstm->_xy,0.1f,-0.1f);
+	CUDA_GPU_CALL_CUSTOM(_fill_rand,lstmw_n,BLK_SIZE,rs,rnn->dt.gpu.lstm->wi,rnn->dt.gpu.lstm->y*rnn->dt.gpu.lstm->_xy,0.1f,-0.1f);
+	CUDA_GPU_CALL_CUSTOM(_fill_rand,lstmw_n,BLK_SIZE,rs,rnn->dt.gpu.lstm->wo,rnn->dt.gpu.lstm->y*rnn->dt.gpu.lstm->_xy,0.1f,-0.1f);
+	CUDA_GPU_CALL_CUSTOM(_fill_rand,lstmb_n,BLK_SIZE,rs,rnn->dt.gpu.lstm->bx,rnn->dt.gpu.lstm->y,0.1f,-0.1f);
+	CUDA_GPU_CALL_CUSTOM(_fill_rand,lstmb_n,BLK_SIZE,rs,rnn->dt.gpu.lstm->bf,rnn->dt.gpu.lstm->y,0.1f,-0.1f);
+	CUDA_GPU_CALL_CUSTOM(_fill_rand,lstmb_n,BLK_SIZE,rs,rnn->dt.gpu.lstm->bi,rnn->dt.gpu.lstm->y,0.1f,-0.1f);
+	CUDA_GPU_CALL_CUSTOM(_fill_rand,lstmb_n,BLK_SIZE,rs,rnn->dt.gpu.lstm->bo,rnn->dt.gpu.lstm->y,0.1f,-0.1f);
+	CUDA_GPU_CALL_CUSTOM(_fill_rand,fc_n,BLK_SIZE,rs,rnn->dt.gpu.fc->w,rnn->dt.gpu.fc->y*rnn->dt.gpu.fc->x,1,-1);
 	CUDA_CALL(cudaDeviceSynchronize());
 	CUDA_CALL(cudaFree(rs));
 	CUDA_CALL(cudaMalloc(&rnn->dt.gpu.lstm_d,sizeof(struct __LSTMRNN_LSTM_LAYER_GPU)));
@@ -565,8 +564,5 @@ void gpu_lstm_rnn_free_dataset(Dataset dts){
 
 
 BOOL WINAPI DllMain(void* dll,unsigned long r,void* rs){
-	(void)dll;
-	(void)r;
-	(void)rs;
 	return TRUE;
 }
